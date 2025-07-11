@@ -37,7 +37,7 @@ interface User {
 }
 
 interface Vendor {
-  id: number
+  id: string
   vendor_id: number
   name: string
   email: string
