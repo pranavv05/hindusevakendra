@@ -22,7 +22,7 @@ import Header from "@/components/header"
 import { User } from "lucide-react"
 
 interface User {
-  id: number
+  id: string
   name: string
   email: string
   phone: string
