@@ -54,3 +54,4 @@ export async function insertOne<T extends Document = Document>(
   const collection = await getCollection<T>(collectionName)
   return collection.insertOne(doc)
 }
+console.log("🌐 Connected to DB:", process.env.MONGODB_URI);
