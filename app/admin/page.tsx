@@ -20,6 +20,11 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import Header from "@/components/header"
 import { User } from "lucide-react"
+useEffect(() => {
+  fetch('/api/admin/users')
+    .then(res => res.json())
+    .then(data => setUsers(data));
+}, []);
 
 interface User {
   id: string
