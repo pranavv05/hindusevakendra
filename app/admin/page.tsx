@@ -1,11 +1,11 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Users,
   Wrench,
@@ -16,15 +16,9 @@ import {
   MapPin,
   Calendar,
   Filter,
-} from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import Header from "@/components/header"
-import { User } from "lucide-react"
-useEffect(() => {
-  fetch('/api/admin/users')
-    .then(res => res.json())
-    .then(data => setUsers(data));
-}, []);
+} from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import Header from '@/components/header'
 
 interface User {
   id: string
@@ -76,7 +70,7 @@ export default function AdminOverviewPage() {
     rejected_vendors: 0,
   })
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState('')
   const { toast } = useToast()
 
   useEffect(() => {
@@ -87,10 +81,10 @@ export default function AdminOverviewPage() {
     try {
       setLoading(true)
 
-      const usersResponse = await fetch("/api/admin/users")
+      const usersResponse = await fetch('/api/admin/users')
       const usersData = await usersResponse.json()
 
-      const vendorsResponse = await fetch("/api/admin/vendors")
+      const vendorsResponse = await fetch('/api/admin/vendors')
       const vendorsData = await vendorsResponse.json()
 
       if (usersData.success) {
@@ -103,9 +97,9 @@ export default function AdminOverviewPage() {
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to fetch admin data",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch admin data',
+        variant: 'destructive',
       })
     } finally {
       setLoading(false)
@@ -113,12 +107,12 @@ export default function AdminOverviewPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     })
   }
 
