@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { countDocuments, getCollection } from "@/lib/db"
 
+export const config = {
+  api: {
+    bodyParser: true,
+    externalResolver: true,
+  },
+}
 export async function GET(request: NextRequest) {
   try {
     // Get all users with their vendor details using aggregation
