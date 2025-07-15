@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -27,7 +28,9 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Download,
+  Image
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Header from "@/components/header"
@@ -74,15 +77,17 @@ interface Vendor {
   license_number?: string
   profile_image?: string
   documents?: string[]
+  // New document fields
+  id_proof?: string
+  address_proof?: string
+  photo?: string
+  id_proof_type?: string // Aadhar/PAN/Driving License
 }
 
 interface Stats {
   total_registrations: number
   total_users: number
   total_vendors: number
-  approved_vendors: number
-  pending_vendors: number
-  rejected_vendors: number
 }
 
 export default function AdminOverviewPage() {
@@ -92,9 +97,6 @@ export default function AdminOverviewPage() {
     total_registrations: 0,
     total_users: 0,
     total_vendors: 0,
-    approved_vendors: 0,
-    pending_vendors: 0,
-    rejected_vendors: 0,
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -108,19 +110,11 @@ export default function AdminOverviewPage() {
   // Calculate stats from actual data
   const calculateStats = useCallback((usersData: User[], vendorsData: Vendor[]) => {
     const serviceUsers = usersData.filter(user => user.user_type === "user")
-    const vendorUsers = usersData.filter(user => user.user_type === "vendor")
     
-    const approvedVendors = vendorsData.filter(vendor => vendor.verification_status === "approved")
-    const pendingVendors = vendorsData.filter(vendor => vendor.verification_status === "pending")
-    const rejectedVendors = vendorsData.filter(vendor => vendor.verification_status === "rejected")
-
     return {
       total_registrations: usersData.length,
       total_users: serviceUsers.length,
       total_vendors: vendorsData.length,
-      approved_vendors: approvedVendors.length,
-      pending_vendors: pendingVendors.length,
-      rejected_vendors: rejectedVendors.length,
     }
   }, [])
 
@@ -306,6 +300,67 @@ export default function AdminOverviewPage() {
     }
   }
 
+  const handleDownloadDocument = (documentUrl: string, documentName: string) => {
+    if (!documentUrl) {
+      toast({
+        title: "Error",
+        description: "Document not available",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    // Create a link element and trigger download
+    const link = document.createElement('a')
+    link.href = documentUrl
+    link.download = documentName
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const DocumentViewer = ({ label, documentUrl, documentType }: { label: string, documentUrl?: string, documentType: string }) => {
+    if (!documentUrl) {
+      return (
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <Label className="text-sm font-medium text-gray-700">{label}</Label>
+          <p className="text-sm text-gray-500 mt-1">Not provided</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="border rounded-lg p-4">
+        <Label className="text-sm font-medium text-gray-700">{label}</Label>
+        <div className="mt-2 flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <FileText className="h-4 w-4" />
+            <span>{documentType}</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleDownloadDocument(documentUrl, `${label.toLowerCase().replace(/\s+/g, '_')}`)}
+            className="flex items-center gap-1"
+          >
+            <Download className="h-3 w-3" />
+            Download
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(documentUrl, '_blank')}
+            className="flex items-center gap-1"
+          >
+            <Eye className="h-3 w-3" />
+            View
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -343,7 +398,7 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -375,48 +430,6 @@ export default function AdminOverviewPage() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Vendors</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.total_vendors}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <div className="h-3 w-3 bg-green-600 rounded-full"></div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Approved Vendors</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.approved_vendors}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <div className="h-3 w-3 bg-yellow-600 rounded-full"></div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending Vendors</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pending_vendors}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
-                  <div className="h-3 w-3 bg-red-600 rounded-full"></div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Rejected Vendors</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.rejected_vendors}</p>
                 </div>
               </div>
             </CardContent>
@@ -719,7 +732,7 @@ export default function AdminOverviewPage() {
 
       {/* Vendor Details Dialog */}
       <Dialog open={showVendorDialog} onOpenChange={setShowVendorDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
