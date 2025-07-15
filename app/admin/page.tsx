@@ -80,40 +80,60 @@ export default function AdminOverviewPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-
-      const usersResponse = await fetch("/api/admin/users");
-      const usersData = await usersResponse.json();
-
-      const vendorsResponse = await fetch("/api/admin/vendors");
-      const vendorsData = await vendorsResponse.json();
 useEffect(() => {
+  // Call once when the component mounts
+  fetchData();
+
+  // Poll every 10 seconds
   const interval = setInterval(() => {
-    fetchData(); // your existing fetch function
-  }, 10000); // every 10 seconds
+    fetchData();
+  }, 10000);
 
   return () => clearInterval(interval);
 }, []);
-      if (usersData.success) {
-        setUsers(usersData.users);
-        setStats(usersData.stats);
-      }
 
-      if (vendorsData.success) {
-        setVendors(vendorsData.vendors);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch admin data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+const fetchData = async () => {
+  try {
+    setLoading(true);
+
+    const usersResponse = await fetch("/api/admin/users", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+      cache: "no-store",
+    });
+    const usersData = await usersResponse.json();
+
+    const vendorsResponse = await fetch("/api/admin/vendors", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+      cache: "no-store",
+    });
+    const vendorsData = await vendorsResponse.json();
+
+    if (usersData.success) {
+      setUsers(usersData.users);
+      setStats(usersData.stats);
     }
-  };
+
+    if (vendorsData.success) {
+      setVendors(vendorsData.vendors);
+    }
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Failed to fetch admin data",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
