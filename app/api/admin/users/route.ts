@@ -44,6 +44,22 @@ export async function GET(request: NextRequest) {
     const approvedVendors = await vendorsCollection.countDocuments({ verificationStatus: "approved" })
     const pendingVendors = await vendorsCollection.countDocuments({ verificationStatus: "pending" })
     const rejectedVendors = await vendorsCollection.countDocuments({ verificationStatus: "rejected" })
+    interface Vendor {
+  id: number
+  vendor_id: number
+  name: string
+  email: string
+  phone: string
+  address: string
+  category: string
+  registered_date: string
+  service_type: string
+  verification_status: string
+  application_date: string
+  photo?: string
+  id_proof?: string
+  address_proof?: string
+}
 
     const stats = {
       total_registrations: totalRegistrations,
