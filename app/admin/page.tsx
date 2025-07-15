@@ -81,8 +81,12 @@ export default function AdminOverviewPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+  const interval = setInterval(() => {
+    fetchData(); // your existing fetch function
+  }, 2000); // every 10 seconds
+
+  return () => clearInterval(interval);
+}, []);
 
   const fetchData = async () => {
     try {
