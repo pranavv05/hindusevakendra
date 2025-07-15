@@ -1,5 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { countDocuments, getCollection } from "@/lib/db"
+import connectToDB from "@/lib/mongodb" // or however you're connecting
+import User from "@/models/User" // if you're using Mongoose
+
+export default async function handler(req, res) {
+  console.log("[API] /admin/users called at", new Date().toISOString());
+
+  try {
+    await connectToDB();
+    const users = await User.find({}).lean();
+
+    console.log("[MongoDB] Users count:", users.length);
+
+    return res.status(200).json({ success: true, users });
+  } catch (err) {
+    console.error("API Error:", err);
+    return res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
