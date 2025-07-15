@@ -80,6 +80,15 @@ export default function AdminOverviewPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
+ useEffect(() => {
+  const interval = setInterval(() => {
+    fetchData();
+  }, 10000); // 10 seconds
+
+  return () => clearInterval(interval);
+}, []);
+
+  
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -89,10 +98,6 @@ export default function AdminOverviewPage() {
 
       const vendorsResponse = await fetch("/api/admin/vendors");
       const vendorsData = await vendorsResponse.json();
-useEffect(() => {
-  const interval = setInterval(() => {
-    fetchData(); // your existing fetch function
-  }, 10000); // every 10 seconds
 
   return () => clearInterval(interval);
 }, []);
