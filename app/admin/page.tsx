@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -7,9 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Users,
   Wrench,
@@ -21,19 +17,10 @@ import {
   Calendar,
   Filter,
   RefreshCw,
-  Check,
-  X,
-  User,
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Download,
-  Image
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Header from "@/components/header"
+import { User } from "lucide-react"
 
 interface User {
   id: number
@@ -62,32 +49,15 @@ interface Vendor {
   service_type: string
   verification_status: string
   application_date: string
-  // Additional fields that might be submitted in the form
-  business_name?: string
-  business_address?: string
-  experience_years?: number
-  description?: string
-  certifications?: string
-  portfolio_links?: string
-  hourly_rate?: number
-  availability?: string
-  service_areas?: string
-  emergency_services?: boolean
-  insurance?: boolean
-  license_number?: string
-  profile_image?: string
-  documents?: string[]
-  // New document fields
-  id_proof?: string
-  address_proof?: string
-  photo?: string
-  id_proof_type?: string // Aadhar/PAN/Driving License
 }
 
 interface Stats {
   total_registrations: number
   total_users: number
   total_vendors: number
+  approved_vendors: number
+  pending_vendors: number
+  rejected_vendors: number
 }
 
 export default function AdminOverviewPage() {
@@ -97,24 +67,31 @@ export default function AdminOverviewPage() {
     total_registrations: 0,
     total_users: 0,
     total_vendors: 0,
+    approved_vendors: 0,
+    pending_vendors: 0,
+    rejected_vendors: 0,
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
-  const [showVendorDialog, setShowVendorDialog] = useState(false)
-  const [processingVendor, setProcessingVendor] = useState<number | null>(null)
-  const [rejectionReason, setRejectionReason] = useState("")
   const { toast } = useToast()
 
   // Calculate stats from actual data
   const calculateStats = useCallback((usersData: User[], vendorsData: Vendor[]) => {
     const serviceUsers = usersData.filter(user => user.user_type === "user")
+    const vendorUsers = usersData.filter(user => user.user_type === "vendor")
     
+    const approvedVendors = vendorsData.filter(vendor => vendor.verification_status === "approved")
+    const pendingVendors = vendorsData.filter(vendor => vendor.verification_status === "pending")
+    const rejectedVendors = vendorsData.filter(vendor => vendor.verification_status === "rejected")
+
     return {
       total_registrations: usersData.length,
       total_users: serviceUsers.length,
       total_vendors: vendorsData.length,
+      approved_vendors: approvedVendors.length,
+      pending_vendors: pendingVendors.length,
+      rejected_vendors: rejectedVendors.length,
     }
   }, [])
 
@@ -232,135 +209,6 @@ export default function AdminOverviewPage() {
     fetchData(true)
   }
 
-  const handleViewVendor = (vendor: Vendor) => {
-    setSelectedVendor(vendor)
-    setShowVendorDialog(true)
-    setRejectionReason("")
-  }
-
-  const handleVendorAction = async (vendorId: number, action: 'approve' | 'reject', reason?: string) => {
-    setProcessingVendor(vendorId)
-    
-    try {
-      const response = await fetch(`/api/admin/vendors/${vendorId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: action === 'approve' ? 'approved' : 'rejected',
-          reason: reason || undefined
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to update vendor status")
-      }
-
-      const result = await response.json()
-
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: `Vendor ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
-        })
-        
-        // Refresh data to reflect changes
-        fetchData(true)
-        
-        // Close dialog
-        setShowVendorDialog(false)
-        setSelectedVendor(null)
-        setRejectionReason("")
-      } else {
-        throw new Error(result.message || "Failed to update vendor status")
-      }
-    } catch (error) {
-      console.error("Error updating vendor status:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update vendor status. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setProcessingVendor(null)
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="h-4 w-4 text-green-600" />
-      case 'rejected':
-        return <XCircle className="h-4 w-4 text-red-600" />
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />
-    }
-  }
-
-  const handleDownloadDocument = (documentUrl: string, documentName: string) => {
-    if (!documentUrl) {
-      toast({
-        title: "Error",
-        description: "Document not available",
-        variant: "destructive",
-      })
-      return
-    }
-    
-    // Create a link element and trigger download
-    const link = document.createElement('a')
-    link.href = documentUrl
-    link.download = documentName
-    link.target = '_blank'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  const DocumentViewer = ({ label, documentUrl, documentType }: { label: string, documentUrl?: string, documentType: string }) => {
-    if (!documentUrl) {
-      return (
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <Label className="text-sm font-medium text-gray-700">{label}</Label>
-          <p className="text-sm text-gray-500 mt-1">Not provided</p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="border rounded-lg p-4">
-        <Label className="text-sm font-medium text-gray-700">{label}</Label>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <FileText className="h-4 w-4" />
-            <span>{documentType}</span>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleDownloadDocument(documentUrl, `${label.toLowerCase().replace(/\s+/g, '_')}`)}
-            className="flex items-center gap-1"
-          >
-            <Download className="h-3 w-3" />
-            Download
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => window.open(documentUrl, '_blank')}
-            className="flex items-center gap-1"
-          >
-            <Eye className="h-3 w-3" />
-            View
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -398,7 +246,7 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -430,6 +278,48 @@ export default function AdminOverviewPage() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Vendors</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.total_vendors}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <div className="h-3 w-3 bg-green-600 rounded-full"></div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Approved Vendors</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.approved_vendors}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <div className="h-3 w-3 bg-yellow-600 rounded-full"></div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Pending Vendors</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pending_vendors}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <div className="h-3 w-3 bg-red-600 rounded-full"></div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Rejected Vendors</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.rejected_vendors}</p>
                 </div>
               </div>
             </CardContent>
@@ -671,23 +561,20 @@ export default function AdminOverviewPage() {
                               <Badge className="bg-orange-100 text-orange-800">{vendor.service_type}</Badge>
                             </td>
                             <td className="p-3">
-                              <div className="flex items-center gap-2">
-                                {getStatusIcon(vendor.verification_status)}
-                                <Badge 
-                                  variant={
-                                    vendor.verification_status === "approved" ? "default" : 
-                                    vendor.verification_status === "pending" ? "secondary" : 
-                                    "destructive"
-                                  }
-                                  className={
-                                    vendor.verification_status === "approved" ? "bg-green-100 text-green-800" :
-                                    vendor.verification_status === "pending" ? "bg-yellow-100 text-yellow-800" :
-                                    "bg-red-100 text-red-800"
-                                  }
-                                >
-                                  {vendor.verification_status}
-                                </Badge>
-                              </div>
+                              <Badge 
+                                variant={
+                                  vendor.verification_status === "approved" ? "default" : 
+                                  vendor.verification_status === "pending" ? "secondary" : 
+                                  "destructive"
+                                }
+                                className={
+                                  vendor.verification_status === "approved" ? "bg-green-100 text-green-800" :
+                                  vendor.verification_status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                                  "bg-red-100 text-red-800"
+                                }
+                              >
+                                {vendor.verification_status}
+                              </Badge>
                             </td>
                             <td className="p-3">
                               <div className="flex items-center text-sm text-gray-600">
@@ -702,13 +589,8 @@ export default function AdminOverviewPage() {
                               </div>
                             </td>
                             <td className="p-3">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleViewVendor(vendor)}
-                                className="flex items-center gap-2"
-                              >
-                                <Eye className="h-3 w-3" />
+                              <Button size="sm" variant="outline">
+                                <Eye className="h-3 w-3 mr-1" />
                                 View Details
                               </Button>
                             </td>
@@ -729,233 +611,6 @@ export default function AdminOverviewPage() {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Vendor Details Dialog */}
-      <Dialog open={showVendorDialog} onOpenChange={setShowVendorDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Vendor Application Details
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedVendor && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Name</Label>
-                      <p className="text-sm text-gray-900">{selectedVendor.name}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Email</Label>
-                      <p className="text-sm text-gray-900">{selectedVendor.email}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Phone</Label>
-                      <p className="text-sm text-gray-900">{selectedVendor.phone}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Service Type</Label>
-                      <Badge className="bg-orange-100 text-orange-800">{selectedVendor.service_type}</Badge>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Current Status</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        {getStatusIcon(selectedVendor.verification_status)}
-                        <Badge 
-                          variant={
-                            selectedVendor.verification_status === "approved" ? "default" : 
-                            selectedVendor.verification_status === "pending" ? "secondary" : 
-                            "destructive"
-                          }
-                          className={
-                            selectedVendor.verification_status === "approved" ? "bg-green-100 text-green-800" :
-                            selectedVendor.verification_status === "pending" ? "bg-yellow-100 text-yellow-800" :
-                            "bg-red-100 text-red-800"
-                          }
-                        >
-                          {selectedVendor.verification_status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Business Information</h3>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Business Name</Label>
-                      <p className="text-sm text-gray-900">{selectedVendor.business_name || 'N/A'}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Experience</Label>
-                      <p className="text-sm text-gray-900">{selectedVendor.experience_years ? `${selectedVendor.experience_years} years` : 'N/A'}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Hourly Rate</Label>
-                      <p className="text-sm text-gray-900">{selectedVendor.hourly_rate ? `₹${selectedVendor.hourly_rate}` : 'N/A'}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">License Number</Label>
-                      <p className="text-sm text-gray-900">{selectedVendor.license_number || 'N/A'}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Emergency Services</Label>
-                      <Badge variant={selectedVendor.emergency_services ? "default" : "secondary"}>
-                        {selectedVendor.emergency_services ? "Available" : "Not Available"}
-                      </Badge>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Insurance</Label>
-                      <Badge variant={selectedVendor.insurance ? "default" : "secondary"}>
-                        {selectedVendor.insurance ? "Covered" : "Not Covered"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Address Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Address Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Personal Address</Label>
-                    <p className="text-sm text-gray-900">{selectedVendor.address || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Business Address</Label>
-                    <p className="text-sm text-gray-900">{selectedVendor.business_address || 'N/A'}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Service Areas</Label>
-                  <p className="text-sm text-gray-900">{selectedVendor.service_areas || 'N/A'}</p>
-                </div>
-              </div>
-              
-              {/* Additional Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Description</Label>
-                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedVendor.description || 'N/A'}</p>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Certifications</Label>
-                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedVendor.certifications || 'N/A'}</p>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Portfolio Links</Label>
-                  <p className="text-sm text-gray-900">{selectedVendor.portfolio_links || 'N/A'}</p>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Availability</Label>
-                  <p className="text-sm text-gray-900">{selectedVendor.availability || 'N/A'}</p>
-                </div>
-              </div>
-              
-              {/* Application Timeline */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Application Timeline</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Application Date</Label>
-                    <p className="text-sm text-gray-900">{formatDate(selectedVendor.application_date)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Registration Date</Label>
-                    <p className="text-sm text-gray-900">{formatDate(selectedVendor.registered_date)}</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Action Section - Only show if vendor is pending */}
-              {selectedVendor.verification_status === 'pending' && (
-                <div className="space-y-4 pt-6 border-t">
-                  <h3 className="text-lg font-semibold text-gray-900">Actions Required</h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Rejection Reason (Optional)</Label>
-                      <Textarea
-                        placeholder="Enter reason for rejection if applicable..."
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        className="mt-2"
-                        rows={3}
-                      />
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => handleVendorAction(selectedVendor.id, 'approve')}
-                        disabled={processingVendor === selectedVendor.id}
-                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                      >
-                        <Check className="h-4 w-4" />
-                        {processingVendor === selectedVendor.id ? 'Processing...' : 'Approve Vendor'}
-                      </Button>
-                      
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleVendorAction(selectedVendor.id, 'reject', rejectionReason)}
-                        disabled={processingVendor === selectedVendor.id}
-                        className="flex items-center gap-2"
-                      >
-                        <X className="h-4 w-4" />
-                        {processingVendor === selectedVendor.id ? 'Processing...' : 'Reject Vendor'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Already processed vendors */}
-              {selectedVendor.verification_status !== 'pending' && (
-                <div className="pt-6 border-t">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    {getStatusIcon(selectedVendor.verification_status)}
-                    <span>
-                      This vendor has been {selectedVendor.verification_status}. 
-                      {selectedVendor.verification_status === 'approved' && ' They can now receive service requests.'}
-                      {selectedVendor.verification_status === 'rejected' && ' They cannot receive service requests.'}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowVendorDialog(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
